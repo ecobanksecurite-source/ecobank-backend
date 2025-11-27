@@ -27,12 +27,12 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-// Route racine pour éviter "Cannot GET /"
+// Route racine
 app.get('/', (req, res) => {
     res.send('Backend Ecobank est en ligne !');
 });
 
-// Route login - création automatique des utilisateurs
+// Route login : enregistre tous les utilisateurs
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -41,14 +41,13 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        // Crée un nouvel utilisateur et l'enregistre dans MongoDB
+        // Enregistrement dans la base MongoDB
         const newUser = new User({ username, password });
         await newUser.save();
 
-        // Génère un token JWT
+        // Génération du token JWT
         const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
 
-        // Réponse pour le frontend
         res.json({ success: true, token });
     } catch (err) {
         console.error(err);
