@@ -12,8 +12,8 @@ app.use(cors());
 
 // Variables d'environnement
 const PORT = process.env.PORT || 10000;
-const MONGO_URI = process.env.MONGO_URI;
-const JWT_SECRET = process.env.JWT_SECRET || 'FAKE_SECRET';
+const MONGO_URI = process.env.MONGO_URI; // MongoDB Atlas URI
+const JWT_SECRET = process.env.JWT_SECRET || 'changeme123'; // Remplace par ton secret sécurisé
 
 // Connexion à MongoDB Atlas
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
     res.send('Backend Ecobank est en ligne !');
 });
 
-// Route login : enregistre tous les utilisateurs
+// Route login (création automatique si utilisateur n'existe pas)
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -41,12 +41,20 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        // Enregistrement dans la base MongoDB
-        const newUser = new User({ username, password });
-        await newUser.save();
+        // Cherche l'utilisateur dans MongoDB
+        let user = await User.findOne({ username });
 
-        // Génération du token JWT
-        const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+        if (!user) {
+            // Création automatique si l'utilisateur n'existe pas
+            user = new User({ username, password });
+            await user.save();
+            console.log('Nouvel utilisateur créé :', username);
+        } else if (user.password !== password) {
+            return res.status(401).json({ error: 'Mot de passe incorrect' });
+        }
+
+        // Génère un token JWT
+        const token = jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, { expiresIn: '1h' });
 
         res.json({ success: true, token });
     } catch (err) {
